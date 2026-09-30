@@ -1,0 +1,28 @@
+# Generated from first.org by org-babel-load-file.
+/first.el
+
+# Installed packages and compiled output.
+/elpa/
+/elpaca/
+/eln-cache/
+/tree-sitter/
+*.elc
+*.eln
+
+# Local state, generated configuration, and downloaded documentation.
+/auto-save-list/
+/backups/
+/etc/
+/var/
+/tramp
+/server/
+
+# Editor backups, auto-saves, and lock files.
+*~
+\#*\#
+.#*
+
+# Local agent and credential directories.
+/.agents/
+/.aws/
+/.codex/

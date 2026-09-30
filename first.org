@@ -1,0 +1,960 @@
+* Emacs configuration file
+
+** General config
+#+BEGIN_SRC emacs-lisp
+    ;; -*- lexical-binding: t; -*-
+    (setq gc-cons-threshold 100000000)
+
+    (defun local/compile-all ()
+      (interactive)
+      (mapc (lambda (directory)
+    	  (byte-recompile-directory directory 0 nil))
+    	load-path))
+
+     (defun local/native-compile-all ()
+       (interactive)
+       (native-compile-async load-path t))
+
+     (require 'use-package)
+     (use-package use-package
+       :config 
+       (setq use-package-always-ensure nil
+    	 use-package-always-defer nil
+    	 use-package-always-demand nil
+    	 use-package-expand-minimally nil
+    	 use-package-enable-imenu-support t
+    	 use-package-hook-name-suffix nil))
+
+  ;; Sane defaults
+  (setq auto-save-default nil
+        create-lockfiles nil
+        delete-old-versions -1
+        vc-make-backup-files t
+        initial-scratch-message ""
+        backup-directory-alist '(("." . "~/.emacs.d/backups"))
+        resize-mini-windows t
+        max-mini-window-height 0.33
+        warning-minimum-level :emergency)
+
+  (tool-bar-mode -1)
+  (toggle-scroll-bar -1)
+  (column-number-mode 1)
+
+  (when (and window-system (font-info "JuliaMono"))
+    (set-face-attribute 'default nil :font "JuliaMono" :height 130 ))
+
+  (use-package eldoc
+    :config (setf eldoc-idle-delay 0.5
+  		eldoc-echo-area-use-multiline-p nil))
+
+  (use-package startup
+    :defer t
+    :config (setq inhibit-startup-screen t))
+
+  (use-package ediff
+    :defer t
+    :ensure nil
+    :config
+    (setq ediff-window-setup-function #'ediff-setup-windows-plain
+  	ediff-split-window-function #'split-window-horizontally))
+
+        ;; Restore window configuration after ediff ends.
+  (add-hook 'ediff-load-hook
+            (lambda ()
+              (add-hook 'ediff-before-setup-hook
+                        (lambda ()
+  			(setq ediff-saved-window-configuration (current-window-configuration))))
+              (let ((restore-window-configuration
+                     (lambda ()
+                       (set-window-configuration ediff-saved-window-configuration))))
+                (add-hook 'ediff-quit-hook restore-window-configuration 'append)
+                (add-hook 'ediff-suspend-hook restore-window-configuration 'append))))
+
+  (defun local/command-line-diff (switch)
+    "Add -diff option to Emacs command line, SWITCH."
+    (let ((file1 (pop command-line-args-left))
+  	(file2 (pop command-line-args-left)))
+      (ediff file1 file2)))
+
+  (add-to-list 'command-switch-alist '("diff" . local/command-line-diff))
+
+
+
+  (use-package exec-path-from-shell
+    :config (exec-path-from-shell-initialize))
+
+  (use-package dired-async
+    :after dired
+    :config (dired-async-mode 1))
+
+  (use-package async)
+  (use-package smooth-scrolling
+    :ensure t
+    :demand t
+    :config
+    (smooth-scrolling-mode 1))
+
+  (use-package ultra-scroll
+    :ensure t
+    :demand t
+    :init
+    (setq scroll-conservatively 3 ; or whatever value you prefer, since v0.4
+          scroll-margin 0)        ; important: scroll-margin>0 not yet supported
+    :config
+    (ultra-scroll-mode 1))
+
+  (use-package hl-line-mode
+    :ensure nil
+    :init (global-hl-line-mode))
+
+
+
+
+#+END_SRC
+
+** Useful packages
+#+BEGIN_SRC emacs-lisp
+
+  (use-package smartparens
+    :ensure t
+    :config (smartparens-global-mode))
+
+  (use-package hydra
+    :ensure t)
+
+  (use-package major-mode-hydra
+    :ensure t
+    :after hydra
+    :bind (("C-c h" . major-mode-hydra)))
+
+  (with-eval-after-load "hydra"
+    (progn 
+      (defhydra hydra-smartparens (:hint nil)
+        "
+   Moving^^^^                       Slurp & Barf^^   Wrapping^^            Sexp juggling^^^^               Destructive
+  ------------------------------------------------------------------------------------------------------------------------
+   [_a_] beginning  [_n_] down      [_h_] bw slurp   [_R_]   rewrap        [_S_] split   [_t_] transpose   [_c_] change inner  [_w_] copy
+   [_e_] end        [_N_] bw down   [_H_] bw barf    [_u_]   unwrap        [_s_] splice  [_A_] absorb      [_C_] change outer
+   [_f_] forward    [_p_] up        [_l_] slurp      [_U_]   bw unwrap     [_r_] raise   [_E_] emit        [_k_] kill          [_g_] quit
+   [_b_] backward   [_P_] bw up     [_L_] barf       [_(__{__[_] wrap (){}[]   [_j_] join    [_o_] convolute   [_K_] bw kill       [_q_] quit"
+        ;; Moving
+        ("a" sp-beginning-of-sexp)
+        ("e" sp-end-of-sexp)
+        ("f" sp-forward-sexp)
+        ("b" sp-backward-sexp)
+        ("n" sp-down-sexp)
+        ("N" sp-backward-down-sexp)
+        ("p" sp-up-sexp)
+        ("P" sp-backward-up-sexp)
+
+        ;; Slurping & barfing
+        ("h" sp-backward-slurp-sexp)
+        ("H" sp-backward-barf-sexp)
+        ("l" sp-forward-slurp-sexp)
+        ("L" sp-forward-barf-sexp)
+
+        ;; Wrapping
+        ("R" sp-rewrap-sexp)
+        ("u" sp-unwrap-sexp)
+        ("U" sp-backward-unwrap-sexp)
+        ("(" sp-wrap-round)
+        ("{" sp-wrap-curly)
+        ("[" sp-wrap-square)
+
+        ;; Sexp juggling
+        ("S" sp-split-sexp)
+        ("s" sp-splice-sexp)
+        ("r" sp-raise-sexp)
+        ("j" sp-join-sexp)
+        ("t" sp-transpose-sexp)
+        ("A" sp-absorb-sexp)
+        ("E" sp-emit-sexp)
+        ("o" sp-convolute-sexp)
+
+        ;; Destructive editing
+        ("c" sp-change-inner :exit t)
+        ("C" sp-change-enclosing :exit t)
+        ("k" sp-kill-sexp)
+        ("K" sp-backward-kill-sexp)
+        ("w" sp-copy-sexp)
+
+        ("q" nil)
+        ("g" nil))
+      (global-set-key (kbd "C-x p") 'hydra-smartparens/body)))
+
+
+  (use-package recentf)
+  (use-package no-littering
+    :ensure t
+    :demand t
+    :config (progn
+  	    (add-to-list 'recentf-exclude no-littering-var-directory)
+  	    (add-to-list 'recentf-exclude no-littering-etc-directory)
+  	    (setq auto-save-file-name-transforms
+  		  `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+  	    (setq custom-file (no-littering-expand-etc-file-name "custom.el"))))
+
+  (use-package dotenv-mode
+    :ensure t
+    :config 
+    (add-to-list 'auto-mode-alist '("\\.env\\..*\\'" . dotenv-mode)))
+
+#+END_SRC
+
+** Theme
+#+BEGIN_SRC emacs-lisp
+  (use-package modus-themes
+    :ensure t)
+
+  (load-theme 'modus-vivendi t)
+
+  (use-package mood-line
+    :ensure t
+    :config
+    (mood-line-mode 1))
+  (which-function-mode)
+
+
+  (use-package all-the-icons
+    :ensure t)
+
+  (use-package page-break-lines
+    :ensure t
+    :config (page-break-lines-mode))
+  (use-package dashboard
+    :ensure t
+    :config
+    (progn
+      (setq
+       dashboard-startup-banner "~/.emacs.d/images/startup.png"
+       dashboard-banner-logo-title nil
+       dashboard-set-navigator t
+       dashboard-set-heading-icons t
+       dashboard-set-file-icons t
+       dashboard-center-content t
+       dashboard-set-heading-icons t
+       dashboard-items '((recents  . 10)))
+      (dashboard-setup-startup-hook)))
+#+END_SRC
+
+** Vim
+#+BEGIN_SRC emacs-lisp
+  (with-eval-after-load 'evil-maps
+     (add-to-list 'evil-emacs-state-modes 'dashboard-mode)
+     (add-to-list 'evil-emacs-state-modes 'vterm-mode)
+     (add-to-list 'evil-emacs-state-modes 'helpful-mode)
+     (add-to-list 'evil-emacs-state-modes 'bufler-list-mode)
+     (add-to-list 'evil-emacs-state-modes 'eww-mode)
+     (add-to-list 'evil-emacs-state-modes 'cider-stacktrace-mode)
+     (add-to-list 'evil-emacs-state-modes 'xref--xref-buffer-mode)
+     (add-to-list 'evil-emacs-state-modes 'apprentice-test-report-mode)
+     (define-key evil-motion-state-map (kbd "/") 'consult-line)
+     (define-key evil-motion-state-map (kbd "n") 'local/imenu-goto-next)
+     (define-key evil-motion-state-map (kbd "N") 'local/imenu-goto-prev))
+
+  (use-package evil
+    :ensure t
+    :config (evil-mode)
+    (setq evil-want-keybinding nil))
+
+  (use-package evil-collection
+    :ensure t
+    :after (evil)
+    :config (evil-collection-init))
+#+END_SRC
+
+** Window/buffer
+#+BEGIN_SRC emacs-lisp
+  (use-package switch-window
+    :ensure t
+    :defer t
+    :bind (("C-c a" . switch-window))
+    :config (setf switch-window-shortcut-style 'qwerty))
+
+
+
+  (use-package zoom-window
+    :ensure t
+    :defer t
+    :bind (("C-c C-j" . zoom-window-zoom))
+    :config
+    (setq zoom-window-mode-line-color "brown"))
+
+  (use-package minibuffer
+    :ensure nil
+    :bind (:map minibuffer-local-completion-map
+  	      ("C-n" . minibuffer-next-completion)
+  	      ("C-p" . minibuffer-previous-completion))
+    :config
+    (setq completion-ignore-case t
+  	completion-auto-select 'second-tab
+  	completion-auto-help 'visible
+  	completion-show-help nil
+  	completions-format 'vertical
+  	read-buffer-completion-ignore-case t
+  	read-file-name-completion-ignore-case t
+  	tab-always-indent 'complete ;; defined in indent.el
+  	)
+    (add-to-list 'completion-at-point-functions 'dabbrev-capf t)
+    (add-to-list 'completion-styles 'flex))
+  
+  (global-set-key (kbd "C-SPC") 'execute-extended-command)
+
+  (use-package icomplete
+    :init (fido-vertical-mode))
+
+  (use-package icomplete
+    :ensure nil
+    :functions (icomplete-forward-completions icomplete-backward-completions)
+    :bind (:map icomplete-fido-mode-map
+  	      ("C-n" . icomplete-forward-completions)
+  	      ("C-p" . icomplete-backward-completions))
+    :config (setq icomplete-in-buffer t))
+
+
+  (use-package consult
+    :ensure t)
+
+  (global-set-key (kbd "C-x f") 'consult-locate)
+  (global-set-key (kbd "C-x b") 'consult-buffer)
+#+END_SRC
+
+** Dired
+#+BEGIN_SRC emacs-lisp
+  (use-package dired
+    :defer t
+    :ensure nil
+    :config
+    (setq delete-by-moving-to-trash t
+  	dired-listing-switches "-alh"))
+
+  (eval-after-load "dired"
+    #'(lambda ()
+        (put 'dired-find-alternate-file 'disabled nil)
+        (define-key dired-mode-map (kbd "RET") #'dired-find-alternate-file)))
+
+  (defun local/dired-do-ispell (&optional arg)
+    (interactive "P")
+    (dolist (file (dired-get-marked-files
+  		 nil arg
+  		 #'(lambda (f) (not (file-directory-p f)))))
+      (save-window-excursion
+        (with-current-buffer (find-file file)
+  	(ispell-buffer)))
+      (message nil)))
+
+  (defun local/dired-ediff-files ()
+    (interactive)
+    (let ((files (dired-get-marked-files))
+  	(wnd (current-window-configuration)))
+      (if (<= (length files) 2)
+  	(let ((file1 (car files))
+  	      (file2 (if (cdr files)
+  			 (cadr files)
+  		       (read-file-name
+  			"file: "
+  			(dired-dwim-target-directory)))))
+  	  (if (file-newer-than-file-p file1 file2)
+  	      (ediff-files file2 file1)
+  	    (ediff-files file1 file2))
+  	  (add-hook 'ediff-after-quit-hook-internal
+  		    (lambda ()
+  		      (setq ediff-after-quit-hook-internal nil)
+  		      (set-window-configuration wnd))))
+        (error "No more than 2 files should be marked"))))
+
+  (use-package dired-x
+    :after dired)
+
+  (global-set-key (kbd "C-c d") 'projectile-dired)
+
+  (use-package dired-k
+    :ensure t
+    :after dired
+    :config (setq dired-k-padding 2
+  		dired-k-human-readable t))
+
+  (use-package dired-git-info
+    :ensure t
+    :after dired
+    :config (setq dgi-auto-hide-details-p nil
+  		dgi-commit-message-format "%s     %cr     %cn     %ce"))
+
+  ;; (add-hook 'dired-after-readin-hook 'dired-git-info-auto-enable)
+
+  (use-package all-the-icons-dired
+    :ensure t
+    :after all-the-icons)
+
+  (add-hook 'dired-after-readin-hook 'all-the-icons-dired-mode)
+
+  (with-eval-after-load "major-mode-hydra"
+    (major-mode-hydra-define dired-mode
+      (:title "Dired Mode" :color pink :separator "=" :exit t)
+      ("File"
+       (
+        ("z" dired-create-empty-file "create")
+        ("G" dired-do-chgrp "chgrp")
+        ("M" dired-do-chmod "chmod")
+        ("m" dired-mark "mark")
+        ("O" dired-display-file "display")
+        ("o" dired-find-file-other-window "display other window")
+        ("R" dired-do-rename "rename")
+        ("S" dired-do-symlink "symlink")
+        ("v" dired-view-file "view") ;; q to exit, s to search, = gets line #
+        ("Z" dired-do-compress "compress"))
+       "Files"
+       (
+  					;("F" dired-do-find-marked-files "open-files")
+        ("C" dired-do-copy "copy-files")	;; Copy all marked files
+        ("D" dired-do-delete "delete-files")
+        ("P" dired-omit-mode "omit files"))
+       "Mark"
+       (("t" dired-toggle-marks "toogle")
+        ("U" dired-unmark-all-marks "unmark all")
+        ("u" dired-unmark "unmark")
+        ("E" dired-mark-extension "mark-extensions")
+        ("+" dired-create-directory "create directory")
+        ("?" dired-summary "summary"))
+       "Diff"
+       (("e" local/dired-ediff-files "ediff-files"))
+       "Misc"
+       (("f" dired-goto-file "go to file")
+        ("V" dired-k "show git info")
+        ("I" dired-git-info-mode "commit git info")
+        ("g" revert-buffer "revert buffer")
+        ("l" dired-do-redisplay "redisplay") ;; relist the marked or singel directory
+        ("h" dired-hide-details-mode "hide details")
+        ("s" dired-sort-toggle-or-edit "toogle-date")
+        ("i" local/dired-do-ispell "ispell")
+        ("A" dired-do-find-regexp "find-regex")
+        ("q" nil "quit")))))
+
+
+#+END_SRC
+
+** Workspace Manager
+
+#+BEGIN_SRC emacs-lisp
+
+  (use-package perspeen
+    :ensure t
+    :config
+    (progn
+      (setq perspeen-workspace-default-name "Main")
+      (perspeen-mode)))
+
+  (with-eval-after-load "hydra"
+    (progn
+      (defhydra hydra-perspeen (:columns 1 :exit t)
+        "
+  	  Perspeen^^^^                  
+  	  ----------------"
+        ("c"  perspeen-create-ws "Create WS")
+        ("n"  perspeen-next-ws "Create WS")
+        ("d"  perspeen-delete-ws "Delete current WS")
+        ("q" nil "Quit"))
+      (global-set-key (kbd "C-c p") 'hydra-perspeen/body)))
+
+#+END_SRC
+
+** Help buffer
+#+BEGIN_SRC emacs-lisp
+
+  (defvar read-symbol-positions-list nil)
+
+  (use-package helpful
+    :ensure t
+    :config
+    :bind (("C-h f" . helpful-callable)
+  	 ("C-h v" . helpful-variable)
+  	 ("C-h k" . helpful-key)
+  	 ("C-c C-d" . helpful-at-point)))
+#+END_SRC
+
+** Org-mode
+
+#+BEGIN_SRC emacs-lisp
+
+#+END_SRC
+
+** Terminal
+#+BEGIN_SRC emacs-lisp
+  (setq async-shell-command-display-buffer nil)
+
+  (use-package vterm
+    :ensure t
+    :bind (:map vterm-mode-map
+  	      ("C-<SPC>" . nil)
+  	      ("C-c u" . nil)))
+
+  (use-package vterm-toggle
+    :ensure t
+    :after vterm
+    :config
+    (progn
+      (setq vterm-toggle-fullscreen-p nil)
+      (setq vterm-toggle-scope 'project)
+      (add-to-list 'display-buffer-alist
+  		 '((lambda(bufname _)
+  		     (with-current-buffer bufname (equal major-mode 'vterm-mode)))
+  		   (display-buffer-reuse-window display-buffer-at-bottom)
+  		   (direction . bottom)
+  		   (dedicated . t)  ;dedicated is supported in emacs27
+  		   (reusable-frames . visible)
+  		   (window-height . 0.3)))))
+
+  (defun local/vterm-toggle(&optional args)
+    "Vterm toggle.
+    Optional argument ARGS ."
+    (interactive "P")
+    (cond
+     ((eq major-mode 'vterm-mode)
+      (if (equal (prefix-numeric-value args) 1)
+  	(vterm-toggle-hide)
+        (vterm)))
+     ((equal (prefix-numeric-value args) 1)
+      (vterm-toggle-show))
+     ((equal (prefix-numeric-value args) 4)
+      (let ((vterm-toggle-fullscreen-p
+  	   (not vterm-toggle-fullscreen-p)))
+        (vterm-toggle-show)))))
+
+  (global-set-key (kbd "C-c u") #'local/vterm-toggle)
+
+  (add-hook 'vterm-toggle-show-hook #'(lambda () (global-hl-line-mode -1)))
+
+  (add-hook 'vterm-toggle-hide-hook #'(lambda () (global-hl-line-mode)))
+#+END_SRC
+
+** Local functions
+#+BEGIN_SRC emacs-lisp
+  (defun local/generate-tags (&optional mode  extensions)
+    "Generate TAG file in the root of the project.
+  It requires MODE as a mode name, and EXTENSIONS optionally."
+    (interactive)
+    (unless mode
+      (setq mode major-mode))
+    (let* ((project-root (projectile-project-root))
+  	 (mode-extension nil)
+  	 (language nil))
+      (cond ((equal mode 'c-mode)
+  	   (setq mode-extension ".h.c"
+  		 language "c"))
+  	  ((equal mode 'c++-mode)
+  	   (setq mode-extension ".h.c.hpp.cpp"
+  		 language "c++"))
+  	  ((equal mode 'lisp-mode)
+  	   (setq mode-extension ".lisp.clisp"
+  		 language "lisp"))
+  	  ((equal mode 'php-mode)
+  	   (setq mode-extension ".php.inc.module"
+  		 language "php"))
+  	  ((equal mode 'elixir-mode)
+  	   (setq mode-extension ".ex.exs"
+  		 language "Elixir")))
+
+      (if (and (not mode-extension) (not extensions))
+  	(error "Error in the mode detection")
+        (async-shell-command
+         (format "cd %s && ctags-universal -h \"%s\"  --languages=%s --append=yes -eR %s"
+  	       (shell-quote-argument project-root)
+  	       mode-extension
+  	       language
+  	       (shell-quote-argument project-root))))))
+
+  (cl-defun local/comint-repl-history (source-name &optional
+  						 (source comint-input-ring)
+  						 (send 'insert))
+    (interactive)
+    (and (with-current-buffer (current-buffer)
+  	 (funcall send (completing-read "Candidate: " (ring-elements source))))
+         t))
+#+END_SRC
+
+** Git
+#+BEGIN_SRC emacs-lisp
+
+
+  (use-package evil-collection-magit
+    :config (evil-collection-magit-init))
+
+  (use-package magit
+    :ensure t
+    :config
+    (progn
+      (global-set-key (kbd "C-x g") 'magit-status)
+      (setq evil-magit-state 'motion)))
+
+
+  (use-package magit-todos
+    :ensure t
+    :defer t
+    :after magit)
+
+  (use-package magit-gitflow
+    :ensure t
+    :after magit)
+
+  (use-package diff-hl
+    :ensure t
+    :config (global-diff-hl-mode))
+
+  (add-hook 'magit-mode-hook 'turn-on-magit-gitflow)
+
+  (with-eval-after-load 'magit
+    (defun local/magit-log--add-date-headers (&rest _ignore)
+      "Add date headers to Magit log buffers."
+      (when (derived-mode-p 'magit-log-mode)
+        (save-excursion
+  	(ov-clear 'date-header t)
+  	(goto-char (point-min))
+  	(cl-loop with last-age
+  		 for this-age = (-some--> (ov-in 'before-string 'any (line-beginning-position) (line-end-position))
+  				  car
+  				  (overlay-get it 'before-string)
+  				  (get-text-property 0 'display it)
+  				  cadr
+  				  (s-match (rx (group (1+ digit) ; number
+  						      " "
+  						      (1+ (not blank))) ; unit
+  					       (1+ blank) eos)
+  					   it)
+  				  cadr)
+  		 do (when (and this-age
+  			       (not (equal this-age last-age)))
+  		      (ov (line-beginning-position) (line-beginning-position)
+  			  'after-string (propertize (concat " " this-age "\n")
+  						    'face 'magit-section-heading)
+  			  'date-header t)
+  		      (setq last-age this-age))
+  		 do (forward-line 1)
+  		 until (eobp)))))
+
+    (define-minor-mode local/magit-log-date-headers-mode
+      "Display date/time headers in `magit-log' buffers."
+      :global t
+      (if local/magit-log-date-headers-mode
+  	(progn
+  	  ;; Enable mode
+  	  (add-hook 'magit-post-refresh-hook #'local/magit-log--add-date-headers)
+  	  (advice-add #'magit-setup-buffer-internal :after #'local/magit-log--add-date-headers))
+        ;; Disable mode
+        (remove-hook 'magit-post-refresh-hook #'local/magit-log--add-date-headers)
+        (advice-remove #'magit-setup-buffer-internal #'local/magit-log--add-date-headers)))
+
+    (local/magit-log-date-headers-mode)
+
+
+    ;;https://github.com/Wilfred/difftastic
+    ;; https://tsdh.org/posts/2022-08-01-difftastic-diffing-with-magit.html
+    (defun th/magit--with-difftastic (buffer command)
+      "Run COMMAND with GIT_EXTERNAL_DIFF=difft then show result in BUFFER."
+      (let ((process-environment
+  	   (cons (concat "GIT_EXTERNAL_DIFF=difft --width="
+  			 (number-to-string (frame-width)))
+  		 process-environment)))
+        ;; Clear the result buffer (we might regenerate a diff, e.g., for
+        ;; the current changes in our working directory).
+        (with-current-buffer buffer
+  	(setq buffer-read-only nil)
+  	(erase-buffer))
+        ;; Now spawn a process calling the git COMMAND.
+        (make-process
+         :name (buffer-name buffer)
+         :buffer buffer
+         :command command
+         ;; Don't query for running processes when emacs is quit.
+         :noquery t
+         ;; Show the result buffer once the process has finished.
+         :sentinel (lambda (proc event)
+  		   (when (eq (process-status proc) 'exit)
+  		     (with-current-buffer (process-buffer proc)
+  		       (goto-char (point-min))
+  		       (ansi-color-apply-on-region (point-min) (point-max))
+  		       (setq buffer-read-only t)
+  		       (view-mode)
+  		       (end-of-line)
+  		       ;; difftastic diffs are usually 2-column side-by-side,
+  		       ;; so ensure our window is wide enough.
+  		       (let ((width (current-column)))
+  			 (while (zerop (forward-line 1))
+  			   (end-of-line)
+  			   (setq width (max (current-column) width)))
+  			 ;; Add column size of fringes
+  			 (setq width (+ width
+  					(fringe-columns 'left)
+  					(fringe-columns 'right)))
+  			 (goto-char (point-min))
+  			 (pop-to-buffer
+  			  (current-buffer)
+  			  `(;; If the buffer is that wide that splitting the frame in
+  			    ;; two side-by-side windows would result in less than
+  			    ;; 80 columns left, ensure it's shown at the bottom.
+  			    ,(when (> 80 (- (frame-width) width))
+  			       #'display-buffer-at-bottom)
+  			    (window-width
+  			     . ,(min width (frame-width))))))))))))
+
+    (defun th/magit-show-with-difftastic (rev)
+      "Show the result of \"git show REV\" with GIT_EXTERNAL_DIFF=difft."
+      (interactive
+       (list (or
+  	    ;; If REV is given, just use it.
+  	    (when (boundp 'rev) rev)
+  	    ;; If not invoked with prefix arg, try to guess the REV from
+  	    ;; point's position.
+  	    (and (not current-prefix-arg)
+  		 (or (magit-thingatpt--git-revision)
+  		     (magit-branch-or-commit-at-point)))
+  	    ;; Otherwise, query the user.
+  	    (magit-read-branch-or-commit "Revision"))))
+      (if (not rev)
+  	(error "No revision specified")
+        (th/magit--with-difftastic
+         (get-buffer-create (concat "*git show difftastic " rev "*"))
+         (list "git" "--no-pager" "show" "--ext-diff" rev))))
+
+    (defun th/magit-diff-with-difftastic (arg)
+      "Show the result of \"git diff ARG\" with GIT_EXTERNAL_DIFF=difft."
+      (interactive
+       (list (or
+  	    ;; If RANGE is given, just use it.
+  	    (when (boundp 'range) range)
+  	    ;; If prefix arg is given, query the user.
+  	    (and current-prefix-arg
+  		 (magit-diff-read-range-or-commit "Range"))
+  	    ;; Otherwise, auto-guess based on position of point, e.g., based on
+  	    ;; if we are in the Staged or Unstaged section.
+  	    (pcase (magit-diff--dwim)
+  	      ('unmerged (error "unmerged is not yet implemented"))
+  	      ('unstaged nil)
+  	      ('staged "--cached")
+  	      (`(stash . ,value) (error "stash is not yet implemented"))
+  	      (`(commit . ,value) (format "%s^..%s" value value))
+  	      ((and range (pred stringp)) range)
+  	      (_ (magit-diff-read-range-or-commit "Range/Commit"))))))
+      (let ((name (concat "*git diff difftastic"
+  			(if arg (concat " " arg) "")
+  			"*")))
+        (th/magit--with-difftastic
+         (get-buffer-create name)
+         `("git" "--no-pager" "diff" "--ext-diff" ,@(when arg (list arg))))))
+
+    (transient-define-prefix th/magit-aux-commands ()
+      "My personal auxiliary magit commands."
+      ["Auxiliary commands"
+       ("d" "Difftastic Diff (dwim)" th/magit-diff-with-difftastic)
+       ("s" "Difftastic Show" th/magit-show-with-difftastic)])
+
+  	(transient-append-suffix 'magit-dispatch "!"
+  	  '("#" "My Magit Cmds" th/magit-aux-commands))
+
+  	(define-key magit-status-mode-map (kbd "#") #'th/magit-aux-commands))
+#+END_SRC
+** Remote
+#+BEGIN_SRC emacs-lisp
+  (use-package tramp
+    :ensure t
+    :config
+    (setf tramp-default-method "ssh"))
+
+#+END_SRC
+** Programming
+*** General
+#+BEGIN_SRC emacs-lisp
+  (use-package flymake
+    :bind (:map  flymake-mode-map
+  	       ("C-c ! l" . flymake-show-diagnostics-buffer)
+  	       ("C-c ! n" . flymake-goto-next-error)
+  	       ("C-c ! p" . flymake-goto-prev-error))
+    :config (setf flymake-fringe-indicator-position nil))
+
+  (add-hook 'prog-mode-hook #'flymake-mode)
+
+  (use-package flyspell
+    :init (add-hook 'prog-mode-hook #'flyspell-prog-mode))
+
+  (defun local/indent-whole-buffer ()
+    (interactive)
+    (save-excursion
+      (save-restriction
+        (indent-region (point-min) (point-max)))))
+
+  (global-set-key (kbd "C-c i") 'local/indent-whole-buffer)
+
+#+END_SRC
+*** Auto-complete
+#+BEGIN_SRC emacs-lisp
+
+  (use-package corfu
+    :ensure t
+    :config
+    (progn
+      (setq corfu-cycle t	;; Enable cycling for `corfu-next/previous'
+  	  corfu-auto t	;; Enable auto completion
+  	  corfu-separator ?\s ;; Orderless field separator
+  	  corfu-quit-at-boundary t)   
+      (global-corfu-mode)))
+
+#+END_SRC
+*** Eglot
+#+BEGIN_SRC emacs-lisp
+  (use-package eglot
+      :config
+      (progn
+        (setf eglot-extend-to-xref t)
+        (add-to-list 'eglot-server-programs
+  		   '(c-ts-mode "clangd-18"))
+        (add-to-list 'eglot-server-programs
+  		   '(c++-ts-mode "clangd-18"))))
+
+#+END_SRC
+*** Treesit
+#+BEGIN_SRC emacs-lisp
+  (use-package treesit-fold
+    :ensure t)
+
+#+END_SRC
+*** Grep
+#+BEGIN_SRC emacs-lisp
+  (use-package grep
+    :config
+    (setq grep-files-aliases
+  	'(("all" . "* .[!.]* ..?*")
+  	  ("el" . "*.el")
+  	  ("ch" . "*.[ch]")
+  	  ("c" . "*.c")
+  	  ("cc" . "*.cc *.cxx *.cpp *.C *.CC *.c++")
+  	  ("cchh" . "*.cc *.[ch]xx *.[ch]pp *.[CHh] *.CC *.HH *.[ch]++")
+  	  ("hh" . "*.hxx *.hpp *.[Hh] *.HH *.h++")
+  	  ("h" . "*.h")
+  	  ("l" . "[Cc]hange[Ll]og*")
+  	  ("m" . "[Mm]akefile*")
+  	  ("tex" . "*.tex")
+  	  ("texi" . "*.texi")
+  	  ("asm" . "*.[sS]")
+  	  ("lisp" . "*.lisp"))
+  	grep-command "grep --recursive --color -nH --null -e"
+  	grep-template "grep --recursive <X> <C> -nH --null -e <R> <F>"
+  	grep-find-command
+  	'("find . -type f -exec grep --color -nH --null -e  \\{\\} +" . 49)))
+
+  (use-package wgrep)
+
+#+END_SRC
+*** Common Lisp
+#+BEGIN_SRC emacs-lisp
+  (use-package sly
+    :ensure t
+    ;;:bind (("C-c C-p" 'sly-mrepl))
+    :config
+    (setf
+     inferior-lisp-program '("sbcl" "--dynamic-space-size" "5120")
+     ;; ;;inferior-lisp-program  "cmucl"
+     ;;inferior-lisp-program '("clisp" "-E" "UTF-8" "-ansi" "-I")
+     ;; inferior-lisp-program "ccl"
+     ;; inferior-lisp-program "abcl"
+     ;;inferior-lisp-program '("ros" "run" "--" "--dynamic-space-size" "5120")
+     ;;inferior-lisp-program "clasp"
+     ;; inferior-lisp-program "ecl"
+     sly-complete-symbol-function 'sly-simple-completions
+     sly-net-coding-system 'utf-8-unix
+     sly-auto-select-connection 'always
+     common-lisp-hyperspec-root (expand-file-name (concat user-emacs-directory "etc/HyperSpec/"))
+
+     sly-kill-without-query-p t
+     sly-description-autofocus t
+     sly-inhibit-pipelining nil
+     sly-load-failed-fasl 'always
+
+     lisp-loop-indent-subclauses nil
+     lisp-loop-indent-forms-like-keywords t
+     lisp-lambda-list-keyword-alignment t
+     sly-export-symbol-representation-auto t
+     common-lisp-style 'modern
+     sly-export-save-file t)
+
+    (defun local/sly-hyper-lookup ()
+      (interactive)
+      (eww-open-file (concat common-lisp-hyperspec-root "Body/"
+  			     (common-lisp-hyperspec--strip-cl-package
+  			      (car (common-lisp-hyperspec--find (common-lisp-hyperspec-read-symbol-name)))))))
+
+    (setq sly-documentation-lookup-function 'local/sly-hyper-lookup)
+
+    (defun local/sly-header ()
+      "Custom sly repl header."
+      "
+  			      .,@@@@@@@@@@@@@@# *               
+  			 ,        ,@@@@@@@@@@@@@@@@(,           
+  				      .@@@@@@@@@@@@@@@%.        
+  					 @@@@@@@@@@@@@@@@,      
+  					  @@@   &@@@@@@@@@&     
+  		    @@@@         @@@&     %@@@    @@@@@@@@@@/   
+  		     @@@.      @@@@.      #@@@@    @@@@@@@@@@,  
+  		/    #@@@     @@@@        @@@@@     @@@@@@@@@*  
+  		      @@@@   @@@@        @@@@@%      %@@@@@@@@  
+  		       @@@@ @@@@       @@@@@@@    @   %@@@@@@@  
+  			@@@@@@@      @@@@@@@@    @@@   &@@@@@@. 
+  			 &@@@@@     @@@@@@@&   *@@@@&   @@@@@,  
+  		 .        /@@@@    #@@@@@@*   @@@@@@@(   @@@@.  
+  		  .         @@@@   %@@@@@    @@@@@@@@@    @@*   
+  		   /         @@@@   @@@@@@@@@@@@@@@@@@@@@@.     
+  		     ,*               @@@@@@@@@@@@@@@@@@@%(      
+  		       ,*               @@@@@@@@@@@@@@@          
+  			  .               /@@@@@@@&             
+  					      ..                
+
+  	      Happy hacking!! ")
+    (advice-add 'sly-mrepl-random-sylvester :override #'local/sly-header))
+
+
+  (use-package sly-mrepl
+    :after sly
+    :defer t
+    :config
+    (with-eval-after-load 'evil
+      (evil-define-key '(normal insert) sly-mrepl-mode-map
+        (kbd "RET") #'sly-mrepl-return
+        (kbd "<return>") #'sly-mrepl-return))
+    (setq sly-mrepl-history-file-name (expand-file-name
+  				     (concat user-emacs-directory "var/.sly-repl-history")))
+    (define-key sly-mrepl-mode-map (kbd "C-q")
+  		#'(lambda ()
+  		    (interactive)
+  		    (local/comint-repl-history "sly-mrepl"))))
+
+  (with-eval-after-load 'major-mode-hydra
+    (major-mode-hydra-define (lisp-mode sly-mrepl-mode)
+      (:title "Common Lisp Mode" :color red :separator "/" :exit t)
+      ("Eval"
+       (("b" sly-eval-buffer "buffer")
+        ("e" sly-eval-defun "defun")
+        ("r" sly-eval-region "region"))
+       "REPL"
+       (("q"  sly-mrepl "go")
+        ("R"  sly-restart-inferior-lisp "restart")
+        ("S"  sly-mrepl-set-package "set package"))
+       "Info"
+       (("." xref-find-definitions  "find-function-at-point")
+        ;;("h" helm-etags "tags")
+        ("c" sly-who-calls "function calls")
+        ("v" sly-who-references "variable references")
+        ("V" sly-who-sets "variable sets")
+        ("I" sly-inspect "inspect variable"))
+       "Debug"
+       (("t" sly-trace-dialog-toggle-trace "toogle sly-trace")
+        ("x" sly-trace-dialog "show trace dialog"))
+       "Doc"
+       (("d" sly-documentation-lookup "thing-at-pt")
+        ;;("a" helm-sly-apropos "apropos")
+        ("f" sly-describe-function "function")
+        ("s" sly-describe-symbol "symbol")
+        ("i" sly-documentation "info lookup"))
+       "Misc"
+       (("g" (local/generate-tags 'lisp-mode) "generate tags")
+        ("-" (local/indent-buffer) "indent buffer")))))
+
+
+#+END_SRC
