@@ -783,6 +783,15 @@
 
   (global-set-key (kbd "C-c i") 'local/indent-whole-buffer)
 
+  (use-package projectile
+    :ensure t
+    :config (projectile-global-mode))
+
+  (use-package imenu-list
+    :ensure t)
+
+  (global-set-key (kbd "C-c l") 'imenu-list)
+
 #+END_SRC
 *** Auto-complete
 #+BEGIN_SRC emacs-lisp
@@ -809,6 +818,54 @@
         (add-to-list 'eglot-server-programs
   		   '(c++-ts-mode "clangd-18"))))
 
+#+END_SRC
+*** Debug
+#+BEGIN_SRC emacs-lisp
+  (use-package dape
+    :preface
+    ;; By default dape shares the same keybinding prefix as `gud'
+    ;; If you do not want to use any prefix, set it to nil.
+    ;; (setq dape-key-prefix "\C-x\C-a")
+
+    :hook
+    ;; Save breakpoints on quit
+    ;; (kill-emacs . dape-breakpoint-save)
+    ;; Load breakpoints on startup
+    ;; (after-init . dape-breakpoint-load)
+
+    :custom
+    ;; Turn on global bindings for setting breakpoints with mouse
+    ;; (dape-breakpoint-global-mode +1)
+
+    ;; Info buffers to the right
+    ;; (dape-buffer-window-arrangement 'right)
+    ;; Info buffers like gud (gdb-mi)
+    (dape-buffer-window-arrangement 'gud)
+    (dape-info-hide-mode-line nil)
+
+    ;; Projectile users
+    (dape-cwd-function #'projectile-project-root)
+
+    :config
+    ;; Pulse source line (performance hit)
+    ;; (add-hook 'dape-display-source-hook #'pulse-momentary-highlight-one-line)
+
+    ;; Save buffers on startup, useful for interpreted languages
+    ;; (add-hook 'dape-start-hook (lambda () (save-some-buffers t t)))
+
+    ;; Kill compile buffer on build success
+    ;; (add-hook 'dape-compile-hook #'kill-buffer)
+    )
+
+  ;; For a more ergonomic Emacs and `dape' experience
+  (use-package repeat
+    :custom
+    (repeat-mode +1))
+
+  ;; Left and right side windows occupy full frame height
+  (use-package emacs
+    :custom
+    (window-sides-vertical t))
 #+END_SRC
 *** Treesit
 #+BEGIN_SRC emacs-lisp
