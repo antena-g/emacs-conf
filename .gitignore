@@ -26,3 +26,4 @@
 /.agents/
 /.aws/
 /.codex/
+!/var/skeletor

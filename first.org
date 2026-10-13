@@ -106,10 +106,6 @@
   (use-package hl-line-mode
     :ensure nil
     :init (global-hl-line-mode))
-
-
-
-
 #+END_SRC
 
 ** Useful packages
@@ -792,6 +788,35 @@
 
   (global-set-key (kbd "C-c l") 'imenu-list)
 
+  (use-package skeletor
+    :ensure t
+    :config
+    (setf skeletor-project-directory (expand-file-name "Programming" (getenv "HOME"))
+  	skeletor-user-directory "~/.emacs.d/var/skeletor"))
+
+
+  (with-eval-after-load 'skeletor
+
+    (skeletor-define-template "Cpp-template"
+      :title "C++ project" :default-license (rx bol "gpl"))
+
+    (skeletor-define-template "Common-lisp-web-template"
+      :title "Common lisp web project" :default-license (rx bol "gpl"))
+
+    (skeletor-define-template "C-template"
+      :title "C project" :default-license (rx bol "gpl"))
+
+    ;; (skeletor-define-template "C-IUP-template"
+    ;;   :title "C IUP project" :default-license (rx bol "gpl")
+    ;;   :after-creation f/init-iup-project)
+
+    (skeletor-define-template "Emacs-lisp-template"
+      :title "Emacs lisp project" :default-license (rx bol "gpl"))
+
+    (skeletor-define-template "Common-lisp-template"
+      :title "Common lisp project" :default-license (rx bol "gpl")))
+
+
 #+END_SRC
 *** Auto-complete
 #+BEGIN_SRC emacs-lisp
@@ -1012,6 +1037,15 @@
        "Misc"
        (("g" (local/generate-tags 'lisp-mode) "generate tags")
         ("-" (local/indent-buffer) "indent buffer")))))
+
+
+
+#+END_SRC
+*** GDScript
+#+BEGIN_SRC emacs-lisp
+  (use-package gdscript-mode
+    :ensure t
+    :hook (gdscript-mode . eglot-ensure))
 
 
 #+END_SRC
