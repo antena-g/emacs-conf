@@ -1,0 +1,11 @@
+* __PROJECT-NAME__
+
+** Features
+** Install 
+** Usage
+** License
+#+begin_example
+  General Public License Version 3 (GPLv3)
+  Copyright (c) FMF - https://sasanidas.gitlab.io/f-site/
+  [[file:LICENSE]]
+#+end_example

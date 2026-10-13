@@ -1,0 +1,47 @@
+stages:
+  - compile
+  - test
+
+default:
+  before_script:
+    - apt-get update && apt-get install -y make curl
+
+compile-sbcl-debian:buster:
+  stage: compile
+  image: debian:buster
+  cache:
+    policy: pull
+  script:
+    - apt-get update && apt-get install -y sbcl
+    - chmod +x scripts/install-sbcl.sh && ./scripts/install-sbcl.sh
+    - make compile-sbcl
+
+compile-clisp-debian:buster:
+  stage: compile
+  image: debian:buster
+  cache:
+    policy: pull
+  script:
+    - apt-get update && apt-get install -y clisp
+    - chmod +x scripts/install-clisp.sh && ./scripts/install-clisp.sh
+    - make compile-clisp
+
+test-sbcl-debian:buster:
+  stage: test
+  image: debian:buster
+  cache:
+    policy: pull
+  script:
+    - apt-get update && apt-get install -y sbcl
+    - chmod +x scripts/install-sbcl.sh && ./scripts/install-sbcl.sh
+    - make test-sbcl
+
+test-clisp-debian:buster:
+  stage: test
+  image: debian:buster
+  cache:
+    policy: pull
+  script:
+    - apt-get update && apt-get install -y clisp
+    - chmod +x scripts/install-clisp.sh && ./scripts/install-clisp.sh
+    - make test-clisp
